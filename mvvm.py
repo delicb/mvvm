@@ -30,10 +30,11 @@ class _Messenger(object):
         self._subscribers = defaultdict(list)
         self._messages = Queue()
         self._lock = Lock()
-        self._timer = DispatcherTimer()
-        self._timer.Interval = TimeSpan.FromMilliseconds(5)
-        self._timer.Tick += self._execute
-        self._timer.Start()
+        _timer = DispatcherTimer()
+        _timer = DispatcherTimer()
+        _timer.Interval = TimeSpan.FromMilliseconds(5)
+        _timer.Tick += self._execute
+        _timer.Start()
 
     def send(self, message):
         '''
@@ -43,7 +44,8 @@ class _Messenger(object):
         :param Message message:
             Message to send.
         '''
-        self._messages.put(message, False)
+        with self._lock:
+            self._messages.put(message, False)
 
     def subscribe(self, msg, handler):
         '''
@@ -120,6 +122,9 @@ class notifiable(property):
 
     For simple properties without getter and setter function and with
     automatic event raising :class:`.NotifyProperty` can be used.
+
+    Idea and initial code for this is taken from
+    http://gui-at.blogspot.com/2009/11/inotifypropertychanged-in-ironpython.html
     '''
     def __init__(self, getter):
         def newgetter(slf):
@@ -127,7 +132,7 @@ class notifiable(property):
                 return getter(slf)
             except AttributeError:
                 return None
-        super(notifiable, self).__init__(newgetter)
+        super(notify_property, self).__init__(newgetter)
 
     def setter(self, setter):
         def newsetter(slf, newvalue):
@@ -172,16 +177,15 @@ class Notifiable(object):
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
+        if hasattr(obj, '__notofiable_%s' % self.name):
+            return getattr(obj, '__notifiable_%s' % self.name)
         return self.value
 
     def __set__(self, obj, value):
-        different = self.value != value
-        if different:
-            self.value = value
+        current = getattr(obj, '__notofiable_%s' % self.name, self.value)
+        if current != value:
+            setattr(obj, '__notofiable_%s' % self.name, value)
             obj.RaisePropertyChanged(self.name)
-
-    def __str__(self):
-        return str(self.value)
 
 
 class ViewModelBaseMeta(type):
@@ -301,9 +305,8 @@ class command(object):
         if not self._handler:
             raise AttributeError('Unable to get field')
         if not self._get_command:
-            executor = partial(self._handler, obj)
-            can_execute = partial(self._can_execute, obj) if self._can_execute else None
-            self._get_command = RelayCommand(executor, can_execute)
+            self._get_command = RelayCommand(partial(self._handler, obj),
+                                             partial(self._can_execute, obj))
         return self._get_command
 
     def can_execute(self, f_can_execute):
