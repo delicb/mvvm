@@ -2,6 +2,7 @@ __author__    = 'Bojan Delic <bojan@delic.in.rs>'
 __date__      = 'Aug 23, 2013'
 __copyright__ = 'Copyright (c) 2013 Bojan Delic'
 
+import os
 import wpf
 from mvvm import ViewModelBase, Notifiable, command
 from System.Windows import Application, Window
@@ -23,7 +24,7 @@ class MyViewModel(ViewModelBase):
 # Just creating window and adding DataContext, nothing special here
 class MyWindow(Window):
     def __init__(self):
-        wpf.LoadComponent(self, 'example1.xaml')
+        wpf.LoadComponent(self, os.path.join(os.path.dirname(__file__), 'example1.xaml'))
         self.DataContext = MyViewModel()
 
 if __name__ == '__main__':

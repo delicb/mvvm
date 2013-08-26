@@ -33,3 +33,8 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Visual Studio
+*.sln
+*.pyproj
+*.suo

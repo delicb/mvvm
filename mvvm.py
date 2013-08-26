@@ -177,14 +177,14 @@ class Notifiable(object):
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
-        if hasattr(obj, '__notofiable_%s' % self.name):
+        if hasattr(obj, '__notifiable_%s' % self.name):
             return getattr(obj, '__notifiable_%s' % self.name)
         return self.value
 
     def __set__(self, obj, value):
-        current = getattr(obj, '__notofiable_%s' % self.name, self.value)
+        current = getattr(obj, '__notifiable_%s' % self.name, self.value)
         if current != value:
-            setattr(obj, '__notofiable_%s' % self.name, value)
+            setattr(obj, '__notifiable_%s' % self.name, value)
             obj.RaisePropertyChanged(self.name)
 
 
@@ -305,8 +305,11 @@ class command(object):
         if not self._handler:
             raise AttributeError('Unable to get field')
         if not self._get_command:
-            self._get_command = RelayCommand(partial(self._handler, obj),
-                                             partial(self._can_execute, obj))
+            if self._can_execute:
+                self._get_command = RelayCommand(partial(self._handler, obj),
+                                                 partial(self._can_execute, obj))
+            else:
+                self._get_command = RelayCommand(partial(self._handler, obj))
         return self._get_command
 
     def can_execute(self, f_can_execute):
