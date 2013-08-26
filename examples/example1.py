@@ -4,12 +4,12 @@ __copyright__ = 'Copyright (c) 2013 Bojan Delic'
 
 import os
 import wpf
-from mvvm import ViewModelBase, Notifiable, command
+from mvvm import ViewModel, Notifiable, command
 from System.Windows import Application, Window
 
 
-# Every ViewModel should inherit from ViewModelBase
-class MyViewModel(ViewModelBase):
+# Every user ViewModel should inherit from ViewModel
+class MyViewModel(ViewModel):
     # creation of properties whose setters automatically
     # invokes PropertyChanged event. Initial value is optional.
     Text1 = Notifiable('initial value')

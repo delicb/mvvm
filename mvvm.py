@@ -111,7 +111,7 @@ class notifiable(property):
 
     Example of usage::
 
-        class MyViewModel(ViewModelBase):
+        class MyViewModel(ViewModel):
             @notify_property
             def foo(self):
                 return self._foo
@@ -151,13 +151,13 @@ class Notifiable(object):
     set. For this to work, this descriptor can only be used in classes that
     implements interface `INotifyPropertyChanged`
 
-    Class is designed to work with subclasses of :class:`ViewModelBase`
+    Class is designed to work with subclasses of :class:`ViewModel`
     because this class implements `INotofyPropertyChanged` and adds metaclass
     that discovers names of variables for raising events.
 
     Example of usage::
 
-        class MyViewModel(ViewModelBase):
+        class MyViewModel(ViewModel):
             my_property = NotifProperty()
     '''
     def __init__(self, initial=None, name=None):
@@ -167,7 +167,7 @@ class Notifiable(object):
 
         :param name:
             Name of this property. If not provided and if this is used with
-            :class:`.ViewModelBase`, name will be set automatically to name
+            :class:`.ViewModel`, name will be set automatically to name
             of property.
         '''
         self.name = name
@@ -185,13 +185,13 @@ class Notifiable(object):
             obj.RaisePropertyChanged(self.name)
 
 
-class ViewModelBaseMeta(type):
+class ViewModelMeta(type):
     '''
     MetaClass that examines fields of new class and populates names of
     :class:`.NotifProperty` fields to names of variables.
     '''
     def __new__(cls, name, bases, dct):
-        super_new = super(ViewModelBaseMeta, cls).__new__
+        super_new = super(ViewModelMeta, cls).__new__
         for name, val in dct.items():
             if isinstance(val, Notifiable):
                 if not hasattr(val, 'name') or not val.name:
@@ -199,11 +199,11 @@ class ViewModelBaseMeta(type):
         return super_new(cls, name, bases, dct)
 
 
-class ViewModelBase(object, INotifyPropertyChanged):
+class ViewModel(object, INotifyPropertyChanged):
     '''
     Base ViewModel class that all view-model classes should inherit from.
     '''
-    __metaclass__ = ViewModelBaseMeta
+    __metaclass__ = ViewModelMeta
 
     def __init__(self):
         self.property_chaged_handlers = []
@@ -274,7 +274,7 @@ class command(object):
     '''
     Decorator to that turns method to command handler. Example of usage::
 
-        class MyClass(ViewModelBase):
+        class MyClass(ViewModel):
             @command
             def command_handler(self):
                 # do something
