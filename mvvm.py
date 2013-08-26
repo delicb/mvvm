@@ -30,11 +30,10 @@ class _Messenger(object):
         self._subscribers = defaultdict(list)
         self._messages = Queue()
         self._lock = Lock()
-        _timer = DispatcherTimer()
-        _timer = DispatcherTimer()
-        _timer.Interval = TimeSpan.FromMilliseconds(5)
-        _timer.Tick += self._execute
-        _timer.Start()
+        self._timer = DispatcherTimer()
+        self._timer.Interval = TimeSpan.FromMilliseconds(5)
+        self._timer.Tick += self._execute
+        self._timer.Start()
 
     def send(self, message):
         '''
@@ -44,8 +43,7 @@ class _Messenger(object):
         :param Message message:
             Message to send.
         '''
-        with self._lock:
-            self._messages.put(message, False)
+        self._messages.put(message, False)
 
     def subscribe(self, msg, handler):
         '''
