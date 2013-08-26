@@ -82,6 +82,7 @@ class _Messenger(object):
                 for subscriber in self._subscribers[msg.msg]:
                     subscriber(msg)
 
+
 class Message(object):
     '''
     Peace of information sent through messaging system.
@@ -92,7 +93,7 @@ class Message(object):
             Name of message that will be sent. This name must match to
             names that subscribers used for them to get the message.
 
-        :param obj data:
+        :param object data:
             Any additional data provided with message.
 
         :param callable callback:
@@ -170,17 +171,15 @@ class Notifiable(object):
             of property.
         '''
         self.name = name
-        self.value = initial
+        self.initial = initial
 
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
-        if hasattr(obj, '__notifiable_%s' % self.name):
-            return getattr(obj, '__notifiable_%s' % self.name)
-        return self.value
+        return getattr(obj, '__notifiable_%s' % self.name, self.initial)
 
     def __set__(self, obj, value):
-        current = getattr(obj, '__notifiable_%s' % self.name, self.value)
+        current = getattr(obj, '__notifiable_%s' % self.name, self.initial)
         if current != value:
             setattr(obj, '__notifiable_%s' % self.name, value)
             obj.RaisePropertyChanged(self.name)
@@ -188,7 +187,7 @@ class Notifiable(object):
 
 class ViewModelBaseMeta(type):
     '''
-    Metaclass that examines fields of new class and populates names of
+    MetaClass that examines fields of new class and populates names of
     :class:`.NotifProperty` fields to names of variables.
     '''
     def __new__(cls, name, bases, dct):
@@ -228,7 +227,7 @@ class ViewModelBase(object, INotifyPropertyChanged):
         self.property_chaged_handlers.Remove(handler)
 
 
-class RelayCommand(ICommand):
+class Command(ICommand):
     '''
     Implementation of WPF command.
     '''
@@ -297,24 +296,21 @@ class command(object):
         '''
         self._handler = handler
         self._can_execute = can_execute
-        self._get_command = None
+        self._command = None
 
     def __get__(self, obj, objtype):
         if not self._handler:
             raise AttributeError('Unable to get field')
-        if not self._get_command:
-            if self._can_execute:
-                self._get_command = RelayCommand(partial(self._handler, obj),
-                                                 partial(self._can_execute, obj))
-            else:
-                self._get_command = RelayCommand(partial(self._handler, obj))
-        return self._get_command
+        if not self._command:
+            self._command = Command(partial(self._handler, obj),
+                                    partial(self._can_execute, obj) if self._can_execute else None)
+        return self._command
 
-    def can_execute(self, f_can_execute):
+    def can_execute(self, can_execute):
         '''
         Decorator that adds function that determines if command can be executed.
 
         Decorated function should return `True` if command can be executed
         and false if it can not.
         '''
-        self._can_execute = f_can_execute
+        self._can_execute = can_execute
