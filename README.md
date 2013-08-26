@@ -21,4 +21,4 @@ class MyViewModel(ViewModelBase):
 ```
 
 This view model can be used in XAML just as if `INotifyPropertyChanged`
-and `ICommand` is implemented directly.
+and `ICommand` are implemented directly.
