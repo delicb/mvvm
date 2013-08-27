@@ -35,7 +35,7 @@ class _Messenger(object):
         self._timer.Tick += self._execute
         self._timer.Start()
 
-    def send(self, message):
+    def send(self, message, *args, **kwargs):
         '''
         Sends provided message to all listeners. Message is only added to
         queue and will be processed on next tick.
@@ -43,7 +43,7 @@ class _Messenger(object):
         :param Message message:
             Message to send.
         '''
-        self._messages.put(message, False)
+        self._messages.put((message, args, kwargs), False)
 
     def subscribe(self, msg, handler):
         '''
@@ -74,34 +74,13 @@ class _Messenger(object):
 
     def _execute(self, sender, event_args):
         '''
-        Event handler for 
+        Event handler for timer that processes all queued messages.
         '''
         with self._lock:
             while not self._messages.empty():
-                msg = self._messages.get(False)
-                for subscriber in self._subscribers[msg.msg]:
-                    subscriber(msg)
-
-
-class Message(object):
-    '''
-    Peace of information sent through messaging system.
-    '''
-    def __init__(self, msg, data=None, callback=None):
-        '''
-        :param str msg:
-            Name of message that will be sent. This name must match to
-            names that subscribers used for them to get the message.
-
-        :param object data:
-            Any additional data provided with message.
-
-        :param callable callback:
-            Callback that handler can choose to call during message processing.
-        '''
-        self.msg = msg
-        self.data = data
-        self.callable = callable
+                msg, args, kwargs = self._messages.get(False)
+                for subscriber in self._subscribers[msg]:
+                    subscriber(*args, **kwargs)
 
 
 class notifiable(property):
