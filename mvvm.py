@@ -83,6 +83,28 @@ class _Messenger(object):
                     subscriber(*args, **kwargs)
 
 
+class Signal(object):
+    def __init__(self, name=None):
+        self._messanger = _Messenger()
+        #self._subscribers = []
+
+    def connect(self, handler):
+        self._messanger.subscribe(self, handler)
+        #self._subscribers.append(handler)
+
+    def disconnect(self, handler):
+        self._messanger.unsubscribe(self, handler)
+        #self._subscribers.remove(handler)
+
+    def emit(self, *args, **kwargs):
+        self._messanger.send(self, *args, **kwargs)
+        #for subscriber in self._subscribers:
+        #    subscriber(*args, **kwargs)
+
+    def __str__(self):
+        return 'signal {name}'.format(name=self.name)
+
+
 class notifiable(property):
     '''
     Decorator that replaces @property decorator by adding raising
@@ -99,7 +121,7 @@ class notifiable(property):
                 self._foo = val
 
     For simple properties without getter and setter function and with
-    automatic event raising :class:`.NotifyProperty` can be used.
+    automatic event raising :class:`.Notifiable` can be used.
 
     Idea and initial code for this is taken from
     http://gui-at.blogspot.com/2009/11/inotifypropertychanged-in-ironpython.html
@@ -172,7 +194,7 @@ class ViewModelMeta(type):
     def __new__(cls, name, bases, dct):
         super_new = super(ViewModelMeta, cls).__new__
         for name, val in dct.items():
-            if isinstance(val, Notifiable):
+            if isinstance(val, (Notifiable, Signal)):
                 if not hasattr(val, 'name') or not val.name:
                     val.name = name
         return super_new(cls, name, bases, dct)
