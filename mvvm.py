@@ -14,6 +14,11 @@ from System.Windows.Input import ICommand
 from System import EventArgs
 from System.Windows.Threading import DispatcherTimer
 from System.ComponentModel import INotifyPropertyChanged, PropertyChangedEventArgs
+from System.Collections.ObjectModel import ObservableCollection
+
+
+class MvvmError(Exception):
+    pass
 
 
 class _Messenger(object):
@@ -45,11 +50,11 @@ class _Messenger(object):
         '''
         self._messages.put((message, args, kwargs), False)
 
-    def subscribe(self, msg, handler):
+    def subscribe(self, message, handler):
         '''
         Adds hander for specified message.
 
-        :param str msg:
+        :param str message:
             Name of message to subscribe to.
 
         :param callable handler:
@@ -59,15 +64,15 @@ class _Messenger(object):
         with self._lock:
             self._subscribers[msg].append(handler)
 
-    def unsubscribe(self, msg, handler):
+    def unsubscribe(self, message, handler):
         '''
         Removes handler from message listeners.
 
-        :param str msg:
+        :param str message:
             Name of message to unsubscribe handler from.
 
         :param callable handler:
-            Callable that should be removed as handler for `msg`.
+            Callable that should be removed as handler for `message`.
         '''
         with self._lock:
             self._subscribers[msg].remove(handler)
@@ -84,22 +89,22 @@ class _Messenger(object):
 
 
 class Signal(object):
+    '''Signal object for messaging.
+
+    Can be used to connect directly to an object without specifying
+    the message name. It works similarly to Qt Signals and Slots.
+    '''
     def __init__(self, name=None):
         self._messanger = _Messenger()
-        #self._subscribers = []
 
     def connect(self, handler):
         self._messanger.subscribe(self, handler)
-        #self._subscribers.append(handler)
 
     def disconnect(self, handler):
         self._messanger.unsubscribe(self, handler)
-        #self._subscribers.remove(handler)
 
     def emit(self, *args, **kwargs):
         self._messanger.send(self, *args, **kwargs)
-        #for subscriber in self._subscribers:
-        #    subscriber(*args, **kwargs)
 
     def __str__(self):
         return 'signal {name}'.format(name=self.name)
@@ -113,12 +118,12 @@ class notifiable(property):
     Example of usage::
 
         class MyViewModel(ViewModel):
-            @notify_property
+            @notifiable
             def foo(self):
                 return self._foo
             @foo.setter
-            def foo(self, val):
-                self._foo = val
+            def foo(self, value):
+                self._foo = value
 
     For simple properties without getter and setter function and with
     automatic event raising :class:`.Notifiable` can be used.
@@ -132,7 +137,7 @@ class notifiable(property):
                 return getter(slf)
             except AttributeError:
                 return None
-        super(notify_property, self).__init__(newgetter)
+        super(notifiable, self).__init__(newgetter)
 
     def setter(self, setter):
         def newsetter(slf, newvalue):
@@ -144,6 +149,29 @@ class notifiable(property):
             fset=newsetter,
             fdel=self.fdel,
             doc=self.__doc__)
+
+
+_OCO = ObservableCollection[object]
+
+class List(_OCO):
+    append = _OCO.Add
+    count = _OCO.Count
+    index = _OCO.IndexOf
+    insert = _OCO.Insert
+    remove = _OCO.Remove
+
+    def extend(self, seq):
+        for item in seq:
+            return self.Add(item)
+
+    def pop(self, index=None):
+        if index:
+            return self.RemoveAt(index)
+        else:
+            return self.RemoveAt(self.Count - 1)
+    
+    def __getitem__(self, y):
+        return list(self)[y]
 
 
 class Notifiable(object):
@@ -184,6 +212,10 @@ class Notifiable(object):
         if current != value:
             setattr(obj, '__notifiable_%s' % self.name, value)
             obj.RaisePropertyChanged(self.name)
+
+    def __delete__(self, obj):
+        if hasattr(obj, '__notifiable_%s' % self.name):
+            delattr(obj, '__notifiable_%s' % self.name)
 
 
 class ViewModelMeta(type):
