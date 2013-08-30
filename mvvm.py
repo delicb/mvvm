@@ -25,7 +25,31 @@ class _Messenger(object):
     '''
     Thread-safe messenger that ensures that all message handlers are executed
     in main dispatcher thread.
+
+    This class should be used as singleton. It is not enforced, but recomanded
+    way of getting instance is by using :meth:`_Messenger.instance` class
+    method.
     '''
+
+    _instance = None
+
+    @classmethod
+    def instance(cls, interval=5):
+        '''
+        Returns existing instance of messenger. If one does not exist it will
+        be created and returned.
+
+        :param int interval:
+            Number of miliseconds that represents interval when messages will
+            be processed.
+            Note that this parameter will be used only the first time when
+            instance is requested, every other time it will be ignored
+            because existing instance of :class:`._Messenger` is returned.
+        '''
+        if not cls._instance:
+            cls._instance = _Messenger(interval)
+        return cls._instance
+
     def __init__(self, interval=5):
         '''
         :param int interval:
@@ -62,7 +86,7 @@ class _Messenger(object):
             and that parameter will be instance of sent message.
         '''
         with self._lock:
-            self._subscribers[msg].append(handler)
+            self._subscribers[message].append(handler)
 
     def unsubscribe(self, message, handler):
         '''
@@ -75,7 +99,7 @@ class _Messenger(object):
             Callable that should be removed as handler for `message`.
         '''
         with self._lock:
-            self._subscribers[msg].remove(handler)
+            self._subscribers[message].remove(handler)
 
     def _execute(self, sender, event_args):
         '''
@@ -95,7 +119,7 @@ class Signal(object):
     the message name. It works similarly to Qt Signals and Slots.
     '''
     def __init__(self, name=None):
-        self._messanger = _Messenger()
+        self._messanger = _Messenger.instance()
 
     def connect(self, handler):
         self._messanger.subscribe(self, handler)
@@ -240,7 +264,7 @@ class ViewModel(object, INotifyPropertyChanged):
 
     def __init__(self):
         self.property_chaged_handlers = []
-        self.messenger = _Messenger()
+        self.messenger = _Messenger.instance()
 
     def RaisePropertyChanged(self, property_name):
         '''
