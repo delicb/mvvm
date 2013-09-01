@@ -1,5 +1,5 @@
-__author__ = 'Bojan Delic <bojan@delic.in.rs>'
-__date__ = 'Aug 21, 2013'
+__author__    = 'Bojan Delic <bojan@delic.in.rs>'
+__date__      = 'Aug 21, 2013'
 __copyright__ = 'Copyright (c) 2013 Bojan Delic'
 
 
@@ -119,15 +119,30 @@ class Signal(object):
     the message name. It works similarly to Qt Signals and Slots.
     '''
     def __init__(self, name=None):
+        '''
+        :param str name:
+            Name of signal, for easier debuging. If not provided name of
+            property to which signal is assigned to will be used if signal
+            is creates in :class:`.ViewModel` class.
+        '''
         self._messanger = _Messenger.instance()
 
     def connect(self, handler):
+        '''
+        Connects handler to this signal.
+        '''
         self._messanger.subscribe(self, handler)
 
     def disconnect(self, handler):
+        '''
+        Disconnects handler from this singal.
+        '''
         self._messanger.unsubscribe(self, handler)
 
     def emit(self, *args, **kwargs):
+        '''
+        Emits this signal. As result, all handlers will be invoked.
+        '''
         self._messanger.send(self, *args, **kwargs)
 
     def __str__(self):
@@ -178,6 +193,9 @@ class notifiable(property):
 _OCO = ObservableCollection[object]
 
 class List(_OCO):
+    '''
+    ObservableCollection that can be used as ordinary python :class:`list`.
+    '''
     append = _OCO.Add
     count = _OCO.Count
     index = _OCO.IndexOf
