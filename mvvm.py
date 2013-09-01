@@ -3,6 +3,7 @@ __date__      = 'Aug 21, 2013'
 __copyright__ = 'Copyright (c) 2013 Bojan Delic'
 
 
+import weakref
 from functools import partial
 from Queue import Queue
 from threading import Lock
@@ -19,6 +20,56 @@ from System.Collections.ObjectModel import ObservableCollection
 
 class MvvmError(Exception):
     pass
+
+
+class WeakCallable(object):
+    '''
+    Weak reference to bound methods.
+
+    Because bound method is created at the moment when it is accessed every
+    time, it will be garbage collected very soon, even if object it is bound
+    to is not garbage collected. This class holds weak references to
+    methods `im_self` and `im_func` that will not be garbage collected
+    until `self` of the method is alive.
+    '''
+
+    def __init__(self, func, on_collect=None):
+        '''
+        Both `on_func_collect` and `on_self_collect` should accept single
+        parameter that will be instance of :class:`.WeakCallable` that died.
+
+        :param callable func:
+            Methods to create weak reference for.
+        :param callable on_collect:
+            Callable that will be called when function is garbage collected.
+        '''
+        self._ext_on_collect = on_collect
+        if hasattr(func, 'im_func'): # if this is method
+            self._func = weakref.ref(func.im_func, self._on_collect)
+            self._obj = weakref.ref(func.im_self)
+        else:
+            self._func = weakref.ref(func, self._on_collect)
+            self._obj = None
+
+    def __call__(self, *args, **kwargs):
+        if self._obj is not None:
+            cl = self._func()
+            obj = self._obj()
+            if cl is not None and obj is not None:
+                return cl(obj, *args, **kwargs)
+            else:
+                raise weakref.ReferenceError('Method no longer available')
+        else:
+            cl = self._func()
+            if cl is not None:
+                return sl(*args, **kwargs)
+            else:
+                raise weakref.ReferenceError('Function no longer available')
+
+    def _on_collect(self, ref):
+        if self._ext_on_collect is not None:
+            self._ext_on_collect(self)
+
 
 
 class _Messenger(object):
@@ -86,8 +137,10 @@ class _Messenger(object):
             and that parameter will be instance of sent message.
         '''
         with self._lock:
-            self._subscribers[message].append(handler)
+            ref = WeakCallable(handler, self._on_collect)
+            self._subscribers[message].append(ref)
 
+    # TODO: Unsubscribing with WeakCallable does not work
     def unsubscribe(self, message, handler):
         '''
         Removes handler from message listeners.
@@ -99,7 +152,7 @@ class _Messenger(object):
             Callable that should be removed as handler for `message`.
         '''
         with self._lock:
-            self._subscribers[message].remove(handler)
+            self._subscribers[message].remove(WeakCallable(handler))
 
     def _execute(self, sender, event_args):
         '''
@@ -109,7 +162,17 @@ class _Messenger(object):
             while not self._messages.empty():
                 msg, args, kwargs = self._messages.get(False)
                 for subscriber in self._subscribers[msg]:
-                    subscriber(*args, **kwargs)
+                    try:
+                        subscriber(*args, **kwargs)
+                    except weakref.ReferenceError:
+                        # Reference to handler is lost and it is OK to silence it
+                        pass
+
+    def _on_collect(self, ref):
+        with self._lock:
+            for msg in self._subscribers:
+                if ref in self._subscribers[msg]:
+                    self._subscribers[msg].remove(ref)
 
 
 class Signal(object):
