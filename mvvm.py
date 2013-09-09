@@ -44,7 +44,7 @@ class WeakCallable(object):
             Callable that will be called when function is garbage collected.
         '''
         self._ext_on_collect = on_collect
-        if hasattr(func, 'im_func'): # if this is method
+        if hasattr(func, 'im_func'):  # if this is method
             self._func = weakref.ref(func.im_func, self._on_collect)
             self._obj = weakref.ref(func.im_self)
         else:
@@ -62,14 +62,13 @@ class WeakCallable(object):
         else:
             cl = self._func()
             if cl is not None:
-                return sl(*args, **kwargs)
+                return cl(*args, **kwargs)
             else:
                 raise weakref.ReferenceError('Function no longer available')
 
     def _on_collect(self, ref):
         if self._ext_on_collect is not None:
             self._ext_on_collect(self)
-
 
 
 class _Messenger(object):
@@ -248,12 +247,13 @@ class notifiable(property):
                 setter(slf, newvalue)
                 slf.RaisePropertyChanged(setter.__name__)
         return property(fget=self.fget,
-            fset=newsetter,
-            fdel=self.fdel,
-            doc=self.__doc__)
+                        fset=newsetter,
+                        fdel=self.fdel,
+                        doc=self.__doc__)
 
 
 _OCO = ObservableCollection[object]
+
 
 class List(_OCO):
     '''
@@ -274,7 +274,7 @@ class List(_OCO):
             return self.RemoveAt(index)
         else:
             return self.RemoveAt(self.Count - 1)
-    
+
     def __getitem__(self, y):
         return list(self)[y]
 
