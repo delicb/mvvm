@@ -45,8 +45,8 @@ class WeakCallable(object):
         '''
         self._ext_on_collect = on_collect
         if hasattr(func, 'im_func'):  # if this is method
-            self._func = weakref.ref(func.im_func, self._on_collect)
-            self._obj = weakref.ref(func.im_self)
+            self._func = weakref.ref(func.im_func)
+            self._obj = weakref.ref(func.im_self, self._on_collect)
         else:
             self._func = weakref.ref(func, self._on_collect)
             self._obj = None
@@ -58,7 +58,7 @@ class WeakCallable(object):
             if cl is not None and obj is not None:
                 return cl(obj, *args, **kwargs)
             else:
-                raise weakref.ReferenceError('Method no longer available')
+                raise weakref.ReferenceError('Object no longer available')
         else:
             cl = self._func()
             if cl is not None:
